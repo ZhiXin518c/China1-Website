@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlaced }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -59,11 +60,17 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
     setOrderError('');
 
     try {
-      // Create the exact data structure the backend expects
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error('Please sign in to place an order');
+      }
+
       const orderData = {
+        customer_id: user.id,
         customer_name: `${formData.firstName} ${formData.lastName}`.trim(),
         customer_phone: formData.phone,
-        email: formData.email,
+        customer_email: formData.email,
         order_type: formData.orderType,
         payment_method: formData.paymentMethod,
         special_instructions: formData.specialInstructions || '',
@@ -71,38 +78,38 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
         tax: Number(calculateTax().toFixed(2)),
         delivery_fee: Number(calculateDeliveryFee().toFixed(2)),
         total: Number(calculateGrandTotal().toFixed(2)),
-        items: cart.map(item => ({
-          menu_item_id: String(item.menuItemId || 'unknown'),
-          name: String(item.name || 'Unknown Item'),
-          quantity: Number(item.quantity || 1),
-          base_price: Number(item.basePrice || 0),
-          final_price: Number((item.finalPrice || item.basePrice || 0) * (item.quantity || 1)),
-          customizations: item.customizations || {},
-          special_instructions: String(item.specialInstructions || '')
-        }))
+        status: 'pending',
+        estimated_ready_time: new Date(Date.now() + 30 * 60000).toISOString(),
       };
 
-      console.log('Sending order data:', JSON.stringify(orderData, null, 2));
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert(orderData)
+        .select()
+        .single();
 
-      const response = await fetch('https://8xhpiqcv5wkp.manus.space/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      });
+      if (orderError) throw orderError;
 
-      const result = await response.json();
-      console.log('Order response:', result);
+      const orderItems = cart.map(item => ({
+        order_id: order.id,
+        menu_item_id: String(item.menuItemId || 'unknown'),
+        name: String(item.name || 'Unknown Item'),
+        quantity: Number(item.quantity || 1),
+        base_price: Number(item.basePrice || 0),
+        final_price: Number((item.finalPrice || item.basePrice || 0)),
+        customizations: item.customizations || {},
+        special_instructions: String(item.specialInstructions || '')
+      }));
 
-      if (response.ok && result.success) {
-        setOrderSuccess(true);
-        if (onOrderPlaced) {
-          onOrderPlaced(result.order);
-        }
-        console.log('Order placed successfully!', result);
-      } else {
-        throw new Error(result.message || `Server error: ${response.status}`);
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      setOrderSuccess(true);
+      if (onOrderPlaced) {
+        onOrderPlaced(order);
       }
     } catch (error) {
       console.error('Order submission error:', error);
