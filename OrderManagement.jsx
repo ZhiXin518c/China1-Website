@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Phone, Mail, MapPin, Package, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { Clock, Phone, Mail, MapPin, Package, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle } from 'lucide-react';
 import { supabase } from './supabaseClient';
 
 const OrderManagement = () => {

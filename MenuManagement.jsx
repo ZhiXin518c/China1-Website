@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Edit2, Trash2, Plus, Save, X } from 'lucide-react';
+import { LocationEdit as Edit2, Trash2, Plus, Save, X } from 'lucide-react';
 import { menuCategories, menuItems } from './menuData';
 
 const MenuManagement = () => {
