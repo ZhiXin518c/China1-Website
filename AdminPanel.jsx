@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Package, Menu as MenuIcon, Settings, Bell } from 'lucide-react';
+import { LogOut, Package, Menu as MenuIcon, Settings, Bell, ChartBar as BarChart3 } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import OrderManagement from './OrderManagement';
 import MenuManagement from './MenuManagement';
+import Analytics from './Analytics';
 
 const AdminPanel = ({ admin, onLogout }) => {
   const [activeTab, setActiveTab] = useState('orders');
@@ -111,6 +112,17 @@ const AdminPanel = ({ admin, onLogout }) => {
               <MenuIcon className="h-4 w-4" />
               Menu
             </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'analytics'
+                  ? 'bg-red-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </button>
           </nav>
         </div>
       </header>
@@ -118,6 +130,7 @@ const AdminPanel = ({ admin, onLogout }) => {
       <main className="p-6">
         {activeTab === 'orders' && <OrderManagement />}
         {activeTab === 'menu' && <MenuManagement />}
+        {activeTab === 'analytics' && <Analytics />}
       </main>
     </div>
   );
