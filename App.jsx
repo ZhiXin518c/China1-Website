@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Search, ChevronLeft, ChevronRight, X, Minus, Plus } from 'lucide-react';
-import Header from './Header';
-import MenuItemCard from './MenuItemCard';
-import CustomizationModal from './CustomizationModal';
-import AuthModal from './AuthModal';
-import CheckoutModal from './CheckoutModal';
-import {
-  restaurantInfo,
-  menuCategories,
-  menuItems,
+import Header from './components/Header';
+import MenuItemCard from './components/MenuItemCard';
+import CustomizationModal from './components/CustomizationModal';
+import AuthModal from './components/AuthModal';
+import CheckoutModal from './components/CheckoutModal';
+import { 
+  restaurantInfo, 
+  menuCategories, 
+  menuItems, 
   getMenuItemsByCategory,
-  calculateItemPrice
-} from './menuData';
+  calculateItemPrice 
+} from './data/menuData';
 import './App.css';
 
 function App() {
