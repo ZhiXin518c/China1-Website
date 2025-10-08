@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, ChevronLeft, ChevronRight, X, Minus, Plus } from 'lucide-react';
-import Header from './components/Header';
-import MenuItemCard from './components/MenuItemCard';
-import CustomizationModal from './components/CustomizationModal';
-import AuthModal from './components/AuthModal';
-import CheckoutModal from './components/CheckoutModal';
-import { 
-  restaurantInfo, 
-  menuCategories, 
-  menuItems, 
+import { ShoppingCart, Search, ChevronLeft, ChevronRight, X, Minus, Plus, History } from 'lucide-react';
+import { supabase } from './supabaseClient';
+import Header from './Header';
+import MenuItemCard from './MenuItemCard';
+import CustomizationModal from './CustomizationModal';
+import AuthModal from './AuthModal';
+import CheckoutModal from './CheckoutModal';
+import OrderHistory from './OrderHistory';
+import {
+  restaurantInfo,
+  menuCategories,
+  menuItems,
   getMenuItemsByCategory,
-  calculateItemPrice 
-} from './data/menuData';
+  calculateItemPrice
+} from './menuData';
 import './App.css';
 
 function App() {
@@ -25,6 +27,7 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
 
   const handleOrderPlaced = (order) => {
     console.log("Order placed successfully:", order);
@@ -33,66 +36,47 @@ function App() {
     alert("Order placed successfully! Your order ID is: " + order.id);
   };
 
-  // Load user from localStorage on mount
+  // Load user from Supabase session on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('china1_user');
-    const savedToken = localStorage.getItem('china1_token');
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        supabase
+          .from('customers')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) setUser(data);
+          });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        supabase
+          .from('customers')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) setUser(data);
+          });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   // Authentication functions
-  const handleLogin = async (phone) => {
-    try {
-      const response = await fetch('https://8xhpiqcv5wkp.manus.space/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setUser(data.customer);
-        localStorage.setItem('china1_user', JSON.stringify(data.customer));
-        return { success: true };
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      return { success: false, error: 'Login failed' };
-    }
+  const handleAuthSuccess = (customerData) => {
+    setUser(customerData);
   };
 
-  const handleRegister = async (userData) => {
-    try {
-      const response = await fetch('https://8xhpiqcv5wkp.manus.space/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        // Auto-login after registration
-        const loginResult = await handleLogin(userData.phone);
-        return loginResult;
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      return { success: false, error: 'Registration failed' };
-    }
-  };
-
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('china1_user');
-    localStorage.removeItem('china1_token');
   };
 
   // Cart functions
@@ -173,9 +157,20 @@ function App() {
           <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
             Fresh ingredients, traditional recipes,<br />exceptional taste
           </h1>
-          <p className="text-xl mb-10 text-red-100">
-            Order online for pickup or delivery
-          </p>
+          <div className="flex items-center justify-center gap-4 mb-10">
+            <p className="text-xl text-red-100">
+              Order online for pickup or delivery
+            </p>
+            {user && (
+              <button
+                onClick={() => setShowOrderHistory(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium"
+              >
+                <History className="h-5 w-5" />
+                Order History
+              </button>
+            )}
+          </div>
           
           {/* Search Bar */}
           <div className="max-w-lg mx-auto relative">
@@ -321,11 +316,18 @@ function App() {
                       </span>
                     </div>
                     
-                    <button 
-                      onClick={() => setShowCheckoutModal(true)} 
+                    <button
+                      onClick={() => {
+                        if (!user) {
+                          setShowCart(false);
+                          setShowAuthModal(true);
+                        } else {
+                          setShowCheckoutModal(true);
+                        }
+                      }}
                       className="w-full py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
                     >
-                      Proceed to Checkout
+                      {user ? 'Proceed to Checkout' : 'Sign In to Checkout'}
                     </button>
                   </div>
                 </>
@@ -339,8 +341,7 @@ function App() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onLogin={handleLogin}
-        onRegister={handleRegister}
+        onAuthSuccess={handleAuthSuccess}
       />
 
       <CustomizationModal
@@ -358,6 +359,25 @@ function App() {
         user={user}
         onOrderPlaced={handleOrderPlaced}
       />
+
+      {showOrderHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
+              <button
+                onClick={() => setShowOrderHistory(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <OrderHistory user={user} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
