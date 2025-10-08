@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
 
-const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlaced }) => {
+const CheckoutModal = ({ isOpen, onClose, cart, clearCart, user }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -97,9 +97,7 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
 
       if (response.ok && result.success) {
         setOrderSuccess(true);
-        if (onOrderPlaced) {
-          onOrderPlaced(result.order);
-        }
+        clearCart();
         console.log('Order placed successfully!', result);
       } else {
         throw new Error(result.message || `Server error: ${response.status}`);
