@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { X, Eye, EyeOff } from 'lucide-react';
-import { supabase } from './supabaseClient';
 
-const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
+const AuthModal = ({ isOpen, onClose, onLogin, onRegister }) => {
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,63 +32,10 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }) => {
 
     try {
       if (isLoginMode) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) throw error;
-
-        const { data: customerData } = await supabase
-          .from('customers')
-          .select('*')
-          .eq('id', data.user.id)
-          .maybeSingle();
-
-        if (onAuthSuccess) {
-          onAuthSuccess(customerData);
-        }
+        await onLogin(formData.email, formData.password);
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-        });
-
-        if (error) throw error;
-
-        if (data.user) {
-          const { error: insertError } = await supabase
-            .from('customers')
-            .insert({
-              id: data.user.id,
-              email: formData.email,
-              first_name: formData.first_name,
-              last_name: formData.last_name,
-              phone: formData.phone,
-              street_address: formData.street_address || '',
-              city: formData.city || '',
-              zip_code: formData.zip_code || '',
-            });
-
-          if (insertError) throw insertError;
-
-          const customerData = {
-            id: data.user.id,
-            email: formData.email,
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-            street_address: formData.street_address || '',
-            city: formData.city || '',
-            zip_code: formData.zip_code || '',
-          };
-
-          if (onAuthSuccess) {
-            onAuthSuccess(customerData);
-          }
-        }
+        await onRegister(formData);
       }
-
       onClose();
       setFormData({
         email: '',
