@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Clock, CircleCheck as CheckCircle, Circle as XCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle, ChevronDown, ChevronUp, MapPin, X } from 'lucide-react';
 import { supabase } from './supabaseClient';
+import OrderTracking from './OrderTracking';
 
 const OrderHistory = ({ user }) => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [trackingOrderId, setTrackingOrderId] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -235,11 +237,40 @@ const OrderHistory = ({ user }) => {
                     </p>
                   </div>
                 )}
+
+                {!['completed', 'cancelled'].includes(order.status) && (
+                  <button
+                    onClick={() => setTrackingOrderId(order.id)}
+                    className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    <MapPin className="h-5 w-5" />
+                    Track Order
+                  </button>
+                )}
               </div>
             </div>
           )}
         </div>
       ))}
+
+      {trackingOrderId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-xl font-bold text-gray-900">Track Your Order</h3>
+              <button
+                onClick={() => setTrackingOrderId(null)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <OrderTracking orderId={trackingOrderId} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

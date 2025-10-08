@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Phone, Mail, MapPin, Package, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, Search } from 'lucide-react';
+import { Clock, Phone, Mail, MapPin, Package, CheckCircle, XCircle, AlertCircle, Search } from 'lucide-react';
 import { supabase } from './supabaseClient';
+import PrintReceipt from './PrintReceipt';
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
@@ -252,39 +253,42 @@ const OrderManagement = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-2">
-                  {order.status === 'pending' && (
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'preparing')}
-                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >
-                      Start Preparing
-                    </button>
-                  )}
-                  {order.status === 'preparing' && (
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'ready')}
-                      className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                    >
-                      Mark Ready
-                    </button>
-                  )}
-                  {order.status === 'ready' && (
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'completed')}
-                      className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                    >
-                      Complete
-                    </button>
-                  )}
-                  {['pending', 'preparing'].includes(order.status) && (
-                    <button
-                      onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                      className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-                    >
-                      Cancel
-                    </button>
-                  )}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    {order.status === 'pending' && (
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'preparing')}
+                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      >
+                        Start Preparing
+                      </button>
+                    )}
+                    {order.status === 'preparing' && (
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'ready')}
+                        className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                      >
+                        Mark Ready
+                      </button>
+                    )}
+                    {order.status === 'ready' && (
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'completed')}
+                        className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                      >
+                        Complete
+                      </button>
+                    )}
+                    {['pending', 'preparing'].includes(order.status) && (
+                      <button
+                        onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                        className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                  <PrintReceipt order={order} orderItems={order.order_items || []} />
                 </div>
               </div>
             </div>
