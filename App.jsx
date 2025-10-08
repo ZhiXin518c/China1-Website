@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Search, ChevronLeft, ChevronRight, X, Minus, Plus, History } from 'lucide-react';
+import { ShoppingCart, Search, ChevronLeft, ChevronRight, X, Minus, Plus } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import Header from './Header';
 import MenuItemCard from './MenuItemCard';
 import CustomizationModal from './CustomizationModal';
 import AuthModal from './AuthModal';
 import CheckoutModal from './CheckoutModal';
-import OrderHistory from './OrderHistory';
 import {
   restaurantInfo,
   menuCategories,
@@ -27,7 +26,6 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
-  const [showOrderHistory, setShowOrderHistory] = useState(false);
 
   const handleOrderPlaced = (order) => {
     console.log("Order placed successfully:", order);
@@ -157,20 +155,9 @@ function App() {
           <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
             Fresh ingredients, traditional recipes,<br />exceptional taste
           </h1>
-          <div className="flex items-center justify-center gap-4 mb-10">
-            <p className="text-xl text-red-100">
-              Order online for pickup or delivery
-            </p>
-            {user && (
-              <button
-                onClick={() => setShowOrderHistory(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium"
-              >
-                <History className="h-5 w-5" />
-                Order History
-              </button>
-            )}
-          </div>
+          <p className="text-xl mb-10 text-red-100">
+            Order online for pickup or delivery
+          </p>
           
           {/* Search Bar */}
           <div className="max-w-lg mx-auto relative">
@@ -359,25 +346,6 @@ function App() {
         user={user}
         onOrderPlaced={handleOrderPlaced}
       />
-
-      {showOrderHistory && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-900">Order History</h2>
-              <button
-                onClick={() => setShowOrderHistory(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto">
-              <OrderHistory user={user} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

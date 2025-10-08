@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, Phone, Mail, MapPin, Package, CheckCircle, XCircle, AlertCircle, Search } from 'lucide-react';
+import { Clock, Phone, Mail, MapPin, Package, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle } from 'lucide-react';
 import { supabase } from './supabaseClient';
-import PrintReceipt from './PrintReceipt';
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadOrders();
@@ -129,17 +127,6 @@ const OrderManagement = () => {
     });
   };
 
-  const filteredOrders = orders.filter(order => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      order.customer_name.toLowerCase().includes(query) ||
-      order.customer_phone.includes(query) ||
-      order.customer_email.toLowerCase().includes(query) ||
-      order.id.toLowerCase().includes(query)
-    );
-  });
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -162,30 +149,19 @@ const OrderManagement = () => {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by name, phone, email, or order ID..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-        />
-      </div>
-
       {loading ? (
         <div className="text-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
           <p className="text-gray-600 mt-4">Loading orders...</p>
         </div>
-      ) : filteredOrders.length === 0 ? (
+      ) : orders.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
           <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">{searchQuery ? 'No orders match your search' : 'No orders found'}</p>
+          <p className="text-gray-600">No orders found</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredOrders.map((order) => (
+          {orders.map((order) => (
             <div
               key={order.id}
               className="bg-white rounded-lg border border-gray-200 hover:shadow-lg transition-shadow"
@@ -253,42 +229,39 @@ const OrderManagement = () => {
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    {order.status === 'pending' && (
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'preparing')}
-                        className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                      >
-                        Start Preparing
-                      </button>
-                    )}
-                    {order.status === 'preparing' && (
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'ready')}
-                        className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                      >
-                        Mark Ready
-                      </button>
-                    )}
-                    {order.status === 'ready' && (
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'completed')}
-                        className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                      >
-                        Complete
-                      </button>
-                    )}
-                    {['pending', 'preparing'].includes(order.status) && (
-                      <button
-                        onClick={() => updateOrderStatus(order.id, 'cancelled')}
-                        className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                  <PrintReceipt order={order} orderItems={order.order_items || []} />
+                <div className="grid grid-cols-2 gap-2">
+                  {order.status === 'pending' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'preparing')}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      Start Preparing
+                    </button>
+                  )}
+                  {order.status === 'preparing' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'ready')}
+                      className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    >
+                      Mark Ready
+                    </button>
+                  )}
+                  {order.status === 'ready' && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'completed')}
+                      className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+                    >
+                      Complete
+                    </button>
+                  )}
+                  {['pending', 'preparing'].includes(order.status) && (
+                    <button
+                      onClick={() => updateOrderStatus(order.id, 'cancelled')}
+                      className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
