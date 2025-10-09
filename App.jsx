@@ -5,6 +5,7 @@ import MenuItemCard from './MenuItemCard';
 import CustomizationModal from './CustomizationModal';
 import AuthModal from './AuthModal';
 import CheckoutModal from './CheckoutModal';
+import OrderHistoryModal from './OrderHistoryModal';
 import {
   restaurantInfo,
   menuCategories,
@@ -12,6 +13,7 @@ import {
   getMenuItemsByCategory,
   calculateItemPrice
 } from './menuData';
+import { supabase } from './supabaseClient';
 import './App.css';
 
 function App() {
@@ -25,6 +27,7 @@ function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showCart, setShowCart] = useState(false);
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [showOrderHistory, setShowOrderHistory] = useState(false);
 
   const handleOrderPlaced = (order) => {
     console.log("Order placed successfully:", order);
@@ -33,66 +36,84 @@ function App() {
     alert("Order placed successfully! Your order ID is: " + order.id);
   };
 
-  // Load user from localStorage on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('china1_user');
-    const savedToken = localStorage.getItem('china1_token');
-    if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        loadUserProfile(session.user.id);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      (async () => {
+        if (session) {
+          await loadUserProfile(session.user.id);
+        } else {
+          setUser(null);
+        }
+      })();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Authentication functions
-  const handleLogin = async (phone) => {
-    try {
-      const response = await fetch('https://8xhpiqcv5wkp.manus.space/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone }),
-      });
+  const loadUserProfile = async (userId) => {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle();
 
-      const data = await response.json();
-      if (data.success) {
-        setUser(data.customer);
-        localStorage.setItem('china1_user', JSON.stringify(data.customer));
-        return { success: true };
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      return { success: false, error: 'Login failed' };
+    if (data) {
+      setUser(data);
     }
+  };
+
+  const handleLogin = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    await loadUserProfile(data.user.id);
   };
 
   const handleRegister = async (userData) => {
-    try {
-      const response = await fetch('https://8xhpiqcv5wkp.manus.space/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+    });
 
-      const data = await response.json();
-      if (data.success) {
-        // Auto-login after registration
-        const loginResult = await handleLogin(userData.phone);
-        return loginResult;
-      } else {
-        return { success: false, error: data.error };
-      }
-    } catch (error) {
-      return { success: false, error: 'Registration failed' };
+    if (authError) {
+      throw new Error(authError.message);
     }
+
+    const { error: profileError } = await supabase
+      .from('customers')
+      .insert([{
+        id: authData.user.id,
+        email: userData.email,
+        first_name: userData.first_name,
+        last_name: userData.last_name,
+        phone: userData.phone,
+        street_address: userData.street_address || null,
+        city: userData.city || null,
+        zip_code: userData.zip_code || null,
+      }]);
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    await loadUserProfile(authData.user.id);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('china1_user');
-    localStorage.removeItem('china1_token');
   };
 
   // Cart functions
@@ -160,11 +181,13 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header 
+      <Header
         user={user}
         onSignInClick={() => setShowAuthModal(true)}
         cart={cart}
         onCartClick={() => setShowCart(true)}
+        onLogoutClick={handleLogout}
+        onOrderHistoryClick={() => setShowOrderHistory(true)}
       />
 
       {/* Hero Section */}
@@ -357,6 +380,12 @@ function App() {
         getCartTotal={getCartTotal}
         user={user}
         onOrderPlaced={handleOrderPlaced}
+      />
+
+      <OrderHistoryModal
+        isOpen={showOrderHistory}
+        onClose={() => setShowOrderHistory(false)}
+        user={user}
       />
     </div>
   );

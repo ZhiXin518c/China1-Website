@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ArrowLeft } from 'lucide-react';
+import { supabase } from './supabaseClient';
 
 const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlaced }) => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -14,8 +15,24 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
     email: '',
     orderType: 'pickup',
     paymentMethod: 'cash',
-    specialInstructions: ''
+    specialInstructions: '',
+    deliveryAddress: ''
   });
+
+  useEffect(() => {
+    if (user && isOpen) {
+      setFormData(prev => ({
+        ...prev,
+        firstName: user.first_name || '',
+        lastName: user.last_name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        deliveryAddress: user.street_address && user.city && user.zip_code
+          ? `${user.street_address}, ${user.city}, ${user.zip_code}`
+          : ''
+      }));
+    }
+  }, [user, isOpen]);
 
   if (!isOpen) return null;
 
@@ -59,50 +76,44 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
     setOrderError('');
 
     try {
-      // Create the exact data structure the backend expects
+      if (!user) {
+        throw new Error('You must be signed in to place an order');
+      }
+
       const orderData = {
-        customer_name: `${formData.firstName} ${formData.lastName}`.trim(),
-        customer_phone: formData.phone,
-        email: formData.email,
+        customer_id: user.id,
         order_type: formData.orderType,
         payment_method: formData.paymentMethod,
-        special_instructions: formData.specialInstructions || '',
-        subtotal: Number(calculateSubtotal().toFixed(2)),
-        tax: Number(calculateTax().toFixed(2)),
-        delivery_fee: Number(calculateDeliveryFee().toFixed(2)),
-        total: Number(calculateGrandTotal().toFixed(2)),
         items: cart.map(item => ({
-          menu_item_id: String(item.menuItemId || 'unknown'),
-          name: String(item.name || 'Unknown Item'),
-          quantity: Number(item.quantity || 1),
-          base_price: Number(item.basePrice || 0),
-          final_price: Number((item.finalPrice || item.basePrice || 0) * (item.quantity || 1)),
+          menuItemId: item.menuItemId,
+          name: item.name,
+          quantity: item.quantity,
+          basePrice: item.basePrice,
+          finalPrice: item.finalPrice,
           customizations: item.customizations || {},
-          special_instructions: String(item.specialInstructions || '')
-        }))
+          specialInstructions: item.specialInstructions || ''
+        })),
+        subtotal: calculateSubtotal(),
+        tax: calculateTax(),
+        tip: 0,
+        total: calculateGrandTotal(),
+        delivery_address: formData.orderType === 'delivery' ? formData.deliveryAddress : null,
+        special_instructions: formData.specialInstructions || null
       };
 
-      console.log('Sending order data:', JSON.stringify(orderData, null, 2));
+      const { data, error } = await supabase
+        .from('orders')
+        .insert([orderData])
+        .select()
+        .single();
 
-      const response = await fetch('https://8xhpiqcv5wkp.manus.space/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData)
-      });
+      if (error) {
+        throw new Error(error.message);
+      }
 
-      const result = await response.json();
-      console.log('Order response:', result);
-
-      if (response.ok && result.success) {
-        setOrderSuccess(true);
-        if (onOrderPlaced) {
-          onOrderPlaced(result.order);
-        }
-        console.log('Order placed successfully!', result);
-      } else {
-        throw new Error(result.message || `Server error: ${response.status}`);
+      setOrderSuccess(true);
+      if (onOrderPlaced) {
+        onOrderPlaced(data);
       }
     } catch (error) {
       console.error('Order submission error:', error);
@@ -123,7 +134,8 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
       email: '',
       orderType: 'pickup',
       paymentMethod: 'cash',
-      specialInstructions: ''
+      specialInstructions: '',
+      deliveryAddress: ''
     });
   };
 
@@ -261,6 +273,19 @@ const CheckoutModal = ({ isOpen, onClose, cart, getCartTotal, user, onOrderPlace
                 </label>
               </div>
             </div>
+            {formData.orderType === 'delivery' && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Address *</label>
+                <textarea
+                  value={formData.deliveryAddress}
+                  onChange={(e) => handleInputChange('deliveryAddress', e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Street address, city, zip code"
+                  required
+                />
+              </div>
+            )}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-1">Special Instructions (Optional)</label>
               <textarea
