@@ -18,7 +18,7 @@ const Header = ({ user, onSignInClick, cart, onCartClick, onLogoutClick, onOrder
           <div className="flex items-center space-x-8 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
               <MapPin className="h-4 w-4 text-gray-500" />
-              <span>1831 Skibo Rd, Fayetteville</span>
+              <span>957 Strickland Bridge Rd, Fayetteville</span>
             </div>
             <div className="flex items-center space-x-2">
               <Phone className="h-4 w-4 text-gray-500" />
